@@ -85,13 +85,19 @@ void commandParser()
     case 'L': // send the list of wheel names
       //First byte sent is the number of wheels
       //Serial.println(MAX_WHEELS);
-      
+#if defined(ESP8266)
+      timer1_disable();
+#endif
       //Wheel names are then sent 1 per line
       for(byte x=0;x<MAX_WHEELS;x++)
       {
         strcpy_P(buf,Wheels[x].decoder_name);
         Serial.println(buf);
       }
+#if defined(ESP8266)
+      timer1_write((uint32_t)new_OCR1A * 160);
+      timer1_enable(TIM_DIV1, TIM_LOOP, true);
+#endif
       break;
 
     case 'n': //Send the number of wheels
@@ -107,6 +113,9 @@ void commandParser()
       break;
 
     case 'P': //Send the pattern for the current wheel
+#if defined(ESP8266)
+      timer1_disable();
+#endif
       for(uint16_t x=0; x<Wheels[config.wheel].wheel_max_edges; x++)
       {
         if(x != 0) { Serial.print(","); }
@@ -117,6 +126,10 @@ void commandParser()
       Serial.println("");
       //2nd row of data sent is the number of degrees the wheel runs over (360 or 720 typically)
       Serial.println(Wheels[config.wheel].wheel_degrees);
+#if defined(ESP8266)
+      timer1_write((uint32_t)new_OCR1A * 160);
+      timer1_enable(TIM_DIV1, TIM_LOOP, true);
+#endif
       break;
 
     case 'R': //Send the current RPM
