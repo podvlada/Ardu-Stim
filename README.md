@@ -66,12 +66,9 @@ Intended hardware platform is the Arduino Nano or Uno.
 
 ### ESP8266 / NodeMCU Build
 
-To build for NodeMCU V3, open the `ardustim` sub-folder in PlatformIO and select the `nodemcuv2` environment. This project now includes an ESP8266 target with NodeMCU pin assignments:
+To build for NodeMCU V3, open the `ardustim` sub-folder in PlatformIO and select the `nodemcuv2` or `nodemcu` environment.
 
-- `D5` = crank / primary output
-- `D6` = cam / secondary output
-- `D7` = cam2 / tertiary output
-- `A0` = RPM pot input
+From the command line: cd ardustim ; pio run -e nodemcuv2
 
 Make sure the NodeMCU is powered with 3.3V logic and the ECU input lines are level shifted if needed.
 

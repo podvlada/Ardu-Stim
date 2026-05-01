@@ -34,6 +34,26 @@
 
 #define VERSION 2
  
+#if defined(ESP8266)
+#define PRIMARY_OUTPUT_PIN D5
+#define SECONDARY_OUTPUT_PIN D6
+#define TERTIARY_OUTPUT_PIN D7
+#define KNOCK_OUTPUT_PIN D8
+#define RPM_POT_PIN A0
+#elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
+#define PRIMARY_OUTPUT_PIN 53
+#define SECONDARY_OUTPUT_PIN 52
+#define TERTIARY_OUTPUT_PIN 51
+#define KNOCK_OUTPUT_PIN 11
+#define RPM_POT_PIN A0
+#else
+#define PRIMARY_OUTPUT_PIN 8
+#define SECONDARY_OUTPUT_PIN 9
+#define TERTIARY_OUTPUT_PIN 10
+#define KNOCK_OUTPUT_PIN 11
+#define RPM_POT_PIN A0
+#endif
+ 
 #define TMP_RPM_SHIFT 4 /* x16, 0-16384 RPM via pot */
 #define TMP_RPM_CAP 9000 /* MAX RPM via pot control. Adjusted to 9,000rpm max from 16,384rpm to match the GUI */
 #define EEPROM_LAST_MODE  100
