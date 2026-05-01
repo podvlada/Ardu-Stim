@@ -1,6 +1,12 @@
 /* vim: set syntax=c expandtab sw=2 softtabstop=2 autoindent smartindent smarttab : */
 /*
- * Arbritrary wheel pattern generator
+ * Simplified Ardu-Stim serial communications
+ * 
+ * Commands:
+ *   R<value> - Set RPM (e.g., R2500)
+ *   O<value> - Set crank offset in degrees (e.g., O15)
+ *   H - Print help
+ *   S - Print current status
  *
  * copyright 2014 David J. Andruczyk
  * 
@@ -21,227 +27,121 @@
 
 #include "globals.h"
 #include "ardustim.h"
-#include "enums.h"
 #include "comms.h"
-#include "storage.h"
-#include "wheel_defs.h"
-#include <pgmspace.h>
-#if defined(ESP8266)
-#include <ESP.h>
-#endif
-#include <math.h>
 
-/* External Globla Variables */
-extern wheels Wheels[];
-
-/* Volatile variables (USED in ISR's) */
-extern volatile bool normal;
-extern volatile uint16_t edge_counter;
-extern volatile uint16_t new_OCR1A;
-
-bool cmdPending;
-byte currentCommand;
-
-//! Initializes the serial port and sets up the Menu
-/*!
- * Sets up the serial port and menu for the serial user interface
- * Sets user input timeout to 20 seconds and overall interactivity timeout at 30
- * at which point it'll disconnect the user
- */
+//! Initializes the serial port
 void serialSetup()
 {
   Serial.begin(115200);
-  cmdPending = false;
+  delay(100);
+  Serial.println("\n\n=== Ardu-Stim Simplified (ESP8266 + Mitsubishi 6G72) ===");
+  Serial.println("Commands:");
+  Serial.println("  R<value>  - Set RPM (300-8000 RPM)");
+  Serial.println("  O<value>  - Set crank offset (0-359 degrees)");
+  Serial.println("  S         - Print current status");
+  Serial.println("  H         - Print this help");
+  Serial.println("================================================\n");
+  printStatus();
 }
 
+//! Simple command parser - reads commands from serial
 void commandParser()
 {
-  char buf[80];
-  byte tmp_wheel;
-  void* pnt_Config = &config;
-  if (cmdPending == false) { currentCommand = Serial.read(); }
-
-  switch (currentCommand)
+  if (Serial.available() > 0)
   {
-    case 'a':
-      break;
-
-    case 'c': //Receive a full config buffer
-      //uint8_t targetBytes = (sizeof(struct configTable)-1); //No byte is sent for the version
-      while(Serial.available() < (sizeof(struct configTable)-1) ) {} //Wait for all bytes
-      for(uint8_t x=1; x<(sizeof(struct configTable)); x++)
-      {
-        *((uint8_t *)pnt_Config + x) = Serial.read(); //Read each byte into the config table
-      }
-      break;
-
-    case 'C': //Send the current config
-      for(uint8_t x=0; x<sizeof(struct configTable); x++)
-      {
-        Serial.write(*((uint8_t *)pnt_Config + x)); //Each byte is simply the location in memory of the config Page + the offset
-      }
-      break;
-      
-    case 'L': // send the list of wheel names
-      //First byte sent is the number of wheels
-      //Serial.println(MAX_WHEELS);
-#if defined(ESP8266)
-      timer1_disable();
-#endif
-      //Wheel names are then sent 1 per line
-      for(byte x=0;x<MAX_WHEELS;x++)
-      {
-        strcpy_P(buf,Wheels[x].decoder_name);
-        Serial.println(buf);
-      }
-#if defined(ESP8266)
-      timer1_write((uint32_t)new_OCR1A * 160);
-      timer1_enable(TIM_DIV1, TIM_LOOP, true);
-#endif
-      break;
-
-    case 'n': //Send the number of wheels
-      Serial.println(MAX_WHEELS);
-      break;
-
-    case 'N': //Send the number of the current wheel
-      Serial.println(config.wheel);
-      break;
+    char command = Serial.read();
+    String inputValue = "";
     
-    case 'p': //Send the size of the current wheel
-      Serial.println(Wheels[config.wheel].wheel_max_edges);
-      break;
-
-    case 'P': //Send the pattern for the current wheel
-#if defined(ESP8266)
-      timer1_disable();
-#endif
-      for(uint16_t x=0; x<Wheels[config.wheel].wheel_max_edges; x++)
+    // Read the value part of the command
+    while (Serial.available() > 0)
+    {
+      char c = Serial.read();
+      if (c == '\n' || c == '\r')
       {
-        if(x != 0) { Serial.print(","); }
-
-        byte tempByte = pgm_read_byte(&Wheels[config.wheel].edge_states_ptr[x]);
-        Serial.print(tempByte);
+        break;
       }
-      Serial.println("");
-      //2nd row of data sent is the number of degrees the wheel runs over (360 or 720 typically)
-      Serial.println(Wheels[config.wheel].wheel_degrees);
-#if defined(ESP8266)
-      timer1_write((uint32_t)new_OCR1A * 160);
-      timer1_enable(TIM_DIV1, TIM_LOOP, true);
-#endif
-      break;
-
-    case 'R': //Send the current RPM
-      Serial.println(currentStatus.rpm);
-      break;
-
-    case 'r': //Set the high and low RPM for sweep mode
-      config.mode = LINEAR_SWEPT_RPM;
-      while(Serial.available() < 6) {} //Wait for 4 bytes representing the new low and high RPMs
-
-      config.sweep_low_rpm = word(Serial.read(), Serial.read());
-      config.sweep_high_rpm = word(Serial.read(), Serial.read());
-      config.sweep_interval = word(Serial.read(), Serial.read());
-
-      //sweep_low_rpm = 100;
-      //sweep_high_rpm = 4000;
-      break;
-
-    case 's': //Save the current config
-      saveConfig();
-      break;
-
-    case 'S': //Set the current wheel
-      while(Serial.available() < 1) {} 
-      tmp_wheel = Serial.read();
-      if(tmp_wheel < MAX_WHEELS)
+      if (isDigit(c) || c == '-')
       {
-        config.wheel = tmp_wheel;
-        display_new_wheel();
+        inputValue += c;
       }
-      break;
+    }
+    
+    switch (command)
+    {
+      case 'R':
+      case 'r':
+        if (inputValue.length() > 0)
+        {
+          uint16_t newRpm = inputValue.toInt();
+          if (newRpm >= MIN_RPM && newRpm <= MAX_RPM)
+          {
+            config.rpm = newRpm;
+            currentStatus.rpm = newRpm;
+            setRPM(newRpm);
+            Serial.print("RPM set to: ");
+            Serial.println(newRpm);
+            printStatus();
+          }
+          else
+          {
+            Serial.print("ERROR: RPM must be between ");
+            Serial.print(MIN_RPM);
+            Serial.print(" and ");
+            Serial.println(MAX_RPM);
+          }
+        }
+        break;
 
-    case 'X': //Just a test method for switching the to the next wheel
-      select_next_wheel_cb();
-      strcpy_P(buf,Wheels[config.wheel].decoder_name);
-      Serial.println(buf);
-      break;
+      case 'O':
+      case 'o':
+        if (inputValue.length() > 0)
+        {
+          int16_t newOffset = inputValue.toInt();
+          // Allow negative or positive offsets, normalize to 0-359
+          if (newOffset < 0)
+          {
+            newOffset = 360 + (newOffset % 360);
+          }
+          newOffset = newOffset % 360;
+          
+          config.crank_offset = newOffset;
+          currentStatus.crank_offset = newOffset;
+          applyOffset(newOffset);
+          Serial.print("Crank offset set to: ");
+          Serial.print(newOffset);
+          Serial.println(" degrees");
+          printStatus();
+        }
+        break;
 
-    default:
-      break;
+      case 'S':
+      case 's':
+        printStatus();
+        break;
+
+      case 'H':
+      case 'h':
+        Serial.println("\n=== Help ===");
+        Serial.println("Commands:");
+        Serial.println("  R<value>  - Set RPM (300-8000 RPM)");
+        Serial.println("  O<value>  - Set crank offset (0-359 degrees)");
+        Serial.println("  S         - Print current status");
+        Serial.println("  H         - Print this help\n");
+        break;
+
+      default:
+        // Ignore unknown commands
+        break;
+    }
   }
-  cmdPending = false;
 }
 
-/* Helper function to spit out amount of ram remainig */
-//! Returns the amount of freeRAM
-/*!
- * Figures out the amount of free RAM remaining nad returns it to the caller
- * \return amount of free memory
- */
-uint16_t freeRam () {
-#if defined(ESP8266)
-  return (uint16_t)ESP.getFreeHeap();
-#else
-  extern int __heap_start, *__brkval; 
-  int v; 
-  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
-#endif
-}
-
-/* SerialUI Callbacks */
-//! Inverts the polarity of the primary output signal
-void toggle_invert_primary_cb()
+//! Print current status to serial
+void printStatus()
 {
-  extern uint8_t output_invert_mask;
-  output_invert_mask ^= 0x01; /* Flip crank invert mask bit */
-
-}
-
-//! Inverts the polarity of the secondary output signal
-void toggle_invert_secondary_cb()
-{
-  extern uint8_t output_invert_mask;
-  output_invert_mask ^= 0x02; /* Flip cam invert mask bit */
-}
-
-void display_new_wheel()
-{
-  reset_new_OCR1A(currentStatus.rpm);
-  edge_counter = 0; // Reset to beginning of the wheel pattern */
-}
-
-
-//! Selects the next wheel in the list
-/*!
- * Selects the next wheel, if at the end, wrap to the beginning of the list,
- * re-calculate the OCR1A value (RPM) and reset, return user information on the
- * selected wheel and current RPM
- */
-void select_next_wheel_cb()
-{
-  if (config.wheel == (MAX_WHEELS-1))
-    config.wheel = 0;
-  else 
-    config.wheel++;
-  
-  display_new_wheel();
-}
-
-//
-//! Selects the previous wheel in the list
-/*!
- * Selects the nex, if at the beginning, wrap to the end of the list,
- * re-calculate the OCR1A value (RPM) and reset, return user information on the
- * selected wheel and current RPM
- */
-void select_previous_wheel_cb()
-{
-  if (config.wheel == 0)
-    config.wheel = MAX_WHEELS-1;
-  else 
-    config.wheel--;
-  
-  display_new_wheel();
+  Serial.print("Current Status: RPM=");
+  Serial.print(currentStatus.rpm);
+  Serial.print(" | Offset=");
+  Serial.print(currentStatus.crank_offset);
+  Serial.println(" deg");
 }

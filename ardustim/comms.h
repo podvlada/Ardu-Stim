@@ -1,6 +1,6 @@
 /* vim: set syntax=c expandtab sw=2 softtabstop=2 autoindent smartindent smarttab : */
 /*
- * Arbritrary wheel pattern generator wheel definitions
+ * Simplified Ardu-Stim serial communications
  *
  * copyright 2014 David J. Andruczyk
  * 
@@ -22,23 +22,10 @@
 #define __COMMS_H__
  
 #include <Arduino.h>
-/* Structures */
 
-/* Prototypes */
-void commandParser();
-void show_info_cb();
-void select_next_wheel_cb();
-void select_previous_wheel_cb();
-void toggle_invert_primary_cb();
-void toggle_invert_secondary_cb();
-void select_wheel_cb();
-void set_rpm_cb();
-void sweep_rpm_cb();
-void reverse_wheel_direction_cb();
-
-/* General functions */
+/* Function Prototypes */
 void serialSetup();
-void display_new_wheel();
-/* General functions */
+void commandParser();
+void printStatus();
 
 #endif

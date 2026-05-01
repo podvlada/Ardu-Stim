@@ -1,6 +1,6 @@
 /* vim: set syntax=c expandtab sw=2 softtabstop=2 autoindent smartindent smarttab : */
 /*
- * Arbritrary wheel pattern generator wheel definitions
+ * Simplified enumerations for ESP8266 + Mitsubishi 6G72
  *
  * copyright 2014 David J. Andruczyk
  * 
@@ -21,26 +21,6 @@
 #ifndef __ENUMS_H__
 #define __ENUMS_H__
  
-/* Enumerations */
-enum {                                                                          
-  PRESCALE_1 = 1,
-  PRESCALE_8 = 2,
-  PRESCALE_64 = 3,
-  PRESCALE_256 = 4,
-  PRESCALE_1024 = 5,
-  RECALC
-};
-
-enum {
-  DESCENDING,
-  ASCENDING
-};
-
-enum {
-  LINEAR_SWEPT_RPM,
-  FIXED_RPM,
-  POT_RPM,
-  MAX_MODES,
-};
+/* No complex enumerations needed - using simple serial commands */
 
 #endif
