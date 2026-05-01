@@ -229,8 +229,8 @@ void setup() {
   timer1_disable();
   timer1_isr_init();
   timer1_attachInterrupt(timer1_isr);
+  timer1_write((uint32_t)new_OCR1A * 160); // Scale from 500kHz constant to 80MHz timer
   timer1_enable(TIM_DIV1, TIM_LOOP, true);
-  timer1_write(new_OCR1A); // Ensure timer has the correct initial interval before the first ISR
 
   adc0 = analogRead(RPM_POT_PIN);
   adc0_read_complete = true;
@@ -265,7 +265,7 @@ ICACHE_RAM_ATTR void timer1_isr()
     cycleStartTime = micros();
   }
 
-  timer1_write(new_OCR1A);
+  timer1_write((uint32_t)new_OCR1A * 160); // Scale from 500kHz constant to 80MHz timer
 }
 #endif
 
