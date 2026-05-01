@@ -121,4 +121,7 @@ void saveConfig()
   lowByte = lowByte(config.compressionOffset);
   EEPROM.update(EEPROM_COMPRESSION_OFFSET, highByte);
   EEPROM.update(EEPROM_COMPRESSION_OFFSET+1, lowByte);
+#if defined(ESP8266)
+  EEPROM.commit();
+#endif
 }

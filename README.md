@@ -17,7 +17,7 @@ Ardustim is an engine simulator built on the Arduino platform. It produces simul
 
 This version is a fork of the original by David Andruczyk [https://gitlab.com/libreems-suite/ardu-stim](https://gitlab.com/libreems-suite/ardu-stim) and is intended to provide a more modern, cross platform GUI as well as continued expansion of the trigger pattern library. It was primarily developed for use by the Speeduino community, but can be utilised for testing virtually any aftermarket ECU system
 
-It is designed to run on an Arduino Nano, but will also work with Arduino Uno and Mega boards. 
+It is designed to run on an Arduino Nano, but will also work with Arduino Uno, Mega, and ESP8266 NodeMCU boards. 
 
 ## Wiring
 
@@ -29,6 +29,13 @@ It is designed to run on an Arduino Nano, but will also work with Arduino Uno an
   - pin `53` will provide the `crank` or primary wheel signal
   - pin `52` will provide the `cam` or secondary wheel signal
   - Pin `51` will provide a `2nd cam` or tertiary wheel signal. This is for simulating some dual cam patterns
+- **ESP8266 NodeMCU V3**
+  - `D5` will provide the `crank` or primary wheel signal
+  - `D6` will provide the `cam` or secondary wheel signal
+  - `D7` will provide a `2nd cam` or tertiary wheel signal
+  - `D8` is reserved for a `knock` signal output
+
+> Use 3.3V logic for NodeMCU outputs and do not interface directly with 5V-only ECU inputs without level shifting.
 
 Example for `Arduino Nano` connected to `Speeduino v0.4` ECU:
 
@@ -56,6 +63,17 @@ Optionally, the firmware source code can be built in either PlatformIO or the Ar
 Simply open the `ardustim` sub-folder in PlatformIO or the Arduino IDE and it should compile without issue.
 
 Intended hardware platform is the Arduino Nano or Uno.
+
+### ESP8266 / NodeMCU Build
+
+To build for NodeMCU V3, open the `ardustim` sub-folder in PlatformIO and select the `nodemcuv2` environment. This project now includes an ESP8266 target with NodeMCU pin assignments:
+
+- `D5` = crank / primary output
+- `D6` = cam / secondary output
+- `D7` = cam2 / tertiary output
+- `A0` = RPM pot input
+
+Make sure the NodeMCU is powered with 3.3V logic and the ECU input lines are level shifted if needed.
 
 ## Installing GUI from Source
 

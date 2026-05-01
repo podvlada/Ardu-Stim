@@ -25,8 +25,11 @@
 #include "comms.h"
 #include "storage.h"
 #include "wheel_defs.h"
-#include <avr/pgmspace.h>
 #include <EEPROM.h>
+
+#if defined(__AVR__)
+#include <avr/pgmspace.h>
+#endif
 
 struct configTable config;
 struct status currentStatus;
@@ -49,6 +52,7 @@ volatile uint32_t cycleStartTime = micros();
 volatile uint32_t cycleDuration = 0;
 uint32_t sweep_time_counter = 0;
 uint8_t sweep_direction = ASCENDING;
+uint32_t analog_last_read_ms = 0;
 
 /* Less sensitive globals */
 uint8_t bitshift = 0;
@@ -129,6 +133,7 @@ void setup() {
   loadConfig();
   serialSetup();
 
+#if defined(__AVR__)
   cli(); // stop interrupts
 
   /* Configuring TIMER1 (pattern generator) */
@@ -217,12 +222,56 @@ void setup() {
   sei(); // Enable interrupts
   // Set ADSC in ADCSRA (0x7A) to start the ADC conversion
   ADCSRA |= B01000000;
+#elif defined(ESP8266)
+  EEPROM.begin(512);
+
+  pinMode(PRIMARY_OUTPUT_PIN, OUTPUT); /* Primary (crank usually) output */
+  pinMode(SECONDARY_OUTPUT_PIN, OUTPUT); /* Secondary (cam1 usually) output */
+  pinMode(TERTIARY_OUTPUT_PIN, OUTPUT); /* Tertiary (cam2 usually) output */
+  pinMode(KNOCK_OUTPUT_PIN, OUTPUT); /* Knock signal */
+
+  timer1_disable();
+  timer1_isr_init();
+  timer1_attachInterrupt(timer1_isr);
+  timer1_enable(TIM_DIV1, TIM_EDGE, true);
+
+  adc0 = analogRead(RPM_POT_PIN);
+  adc0_read_complete = true;
+#else
+  #error "Unsupported architecture"
+#endif
+
   /* Make sure we are using the DEFAULT RPM on startup */
   reset_new_OCR1A(currentStatus.rpm); 
 
 } // End setup
 
+#if defined(ESP8266)
+ICACHE_RAM_ATTR void writeOutputPattern(uint8_t pattern)
+{
+  digitalWrite(PRIMARY_OUTPUT_PIN, (pattern & 0x01) ? HIGH : LOW);
+  digitalWrite(SECONDARY_OUTPUT_PIN, (pattern & 0x02) ? HIGH : LOW);
+  digitalWrite(TERTIARY_OUTPUT_PIN, (pattern & 0x04) ? HIGH : LOW);
+}
 
+ICACHE_RAM_ATTR void timer1_isr()
+{
+  uint8_t outputState = output_invert_mask ^ pgm_read_byte(&Wheels[config.wheel].edge_states_ptr[edge_counter]);
+  writeOutputPattern(outputState);
+
+  edge_counter++;
+  if (edge_counter == Wheels[config.wheel].wheel_max_edges)
+  {
+    edge_counter = 0;
+    cycleDuration = micros() - cycleStartTime;
+    cycleStartTime = micros();
+  }
+
+  timer1_write(new_OCR1A);
+}
+#endif
+
+#if defined(__AVR__)
 //! ADC ISR for alternating between ADC pins 0 and 1
 /*!
  * Reads ADC ports 0 and 1 alternately. Port 0 is RPM, Port 1 is for
@@ -253,7 +302,9 @@ ISR(ADC_vect){
 //    return;
 //  }
 }
+#endif
 
+#if defined(__AVR__)
 /* Pumps the pattern out of flash to the port 
  * The rate at which this runs is dependent on what OCR1A is set to
  */
@@ -281,6 +332,9 @@ ISR(TIMER1_COMPA_vect)
   /* Reset next compare value for RPM changes */
   OCR1A = new_OCR1A;  /* Apply new "RPM" from Timer2 ISR, i.e. speed up/down the virtual "wheel" */
 }
+#elif defined(ESP8266)
+/* ESP8266 timer1 isr wrapper not used here. */
+#endif
 
 void loop() 
 {
@@ -292,12 +346,22 @@ void loop()
 
   if(config.mode == POT_RPM)
   {
+#if defined(ESP8266)
+    if (millis() - analog_last_read_ms >= 20)
+    {
+      analog_last_read_ms = millis();
+      adc0 = analogRead(RPM_POT_PIN);
+      tmp_rpm = adc0 << TMP_RPM_SHIFT;
+      if (tmp_rpm > TMP_RPM_CAP) { tmp_rpm = TMP_RPM_CAP; }
+    }
+#else
     if (adc0_read_complete == true)
     {
       adc0_read_complete = false;
       tmp_rpm = adc0 << TMP_RPM_SHIFT;
       if (tmp_rpm > TMP_RPM_CAP) { tmp_rpm = TMP_RPM_CAP; }
     }
+#endif
   }
   else if (config.mode == LINEAR_SWEPT_RPM)
   {
@@ -405,15 +469,19 @@ void reset_new_OCR1A(uint32_t new_rpm)
   uint32_t tmp;
   uint8_t bitshift;
   uint8_t tmp_prescaler_bits;
+#if defined(__AVR__)
   tmp = (uint32_t)(8000000.0/(Wheels[config.wheel].rpm_scaler * (float)(new_rpm < 10 ? 10:new_rpm)));
-  //tmp = (uint32_t)(8000000/(Wheels[config.wheel].rpm_scaler * (new_rpm < 10 ? 10:new_rpm)));
-  //uint64_t x = 800000000000ULL;
-
   get_prescaler_bits(&tmp,&tmp_prescaler_bits,&bitshift);
-
   new_OCR1A = (uint16_t)(tmp >> bitshift); 
   prescaler_bits = tmp_prescaler_bits;
-  reset_prescaler = true; 
+  reset_prescaler = true;
+#elif defined(ESP8266)
+  tmp = (uint32_t)(500000.0/(Wheels[config.wheel].rpm_scaler * (float)(new_rpm < 10 ? 10:new_rpm)));
+  if (tmp < 1) { tmp = 1; }
+  new_OCR1A = (uint16_t)tmp;
+#else
+  #error "Unsupported architecture"
+#endif
 }
 
 

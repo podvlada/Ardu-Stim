@@ -24,6 +24,14 @@
 #include "Arduino.h"
 #include "wheel_defs.h"
 
+#if defined(ESP8266)
+#define PRIMARY_OUTPUT_PIN D5
+#define SECONDARY_OUTPUT_PIN D6
+#define TERTIARY_OUTPUT_PIN D7
+#define KNOCK_OUTPUT_PIN D8
+#define RPM_POT_PIN A0
+#endif
+
 #define VERSION 2
  
 #define TMP_RPM_SHIFT 4 /* x16, 0-16384 RPM via pot */

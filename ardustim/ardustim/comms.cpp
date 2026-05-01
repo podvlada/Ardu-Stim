@@ -25,9 +25,11 @@
 #include "comms.h"
 #include "storage.h"
 #include "wheel_defs.h"
-#include <avr/pgmspace.h>
+#include <pgmspace.h>
+#if defined(ESP8266)
+#include <ESP.h>
+#endif
 #include <math.h>
-#include <util/delay.h>
 
 /* External Globla Variables */
 extern wheels Wheels[];
@@ -166,9 +168,13 @@ void commandParser()
  * \return amount of free memory
  */
 uint16_t freeRam () {
+#if defined(ESP8266)
+  return (uint16_t)ESP.getFreeHeap();
+#else
   extern int __heap_start, *__brkval; 
   int v; 
   return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
+#endif
 }
 
 /* SerialUI Callbacks */
