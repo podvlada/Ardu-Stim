@@ -30,6 +30,7 @@
 #define TERTIARY_OUTPUT_PIN D7
 #define KNOCK_OUTPUT_PIN D8
 #define RPM_POT_PIN A0
+#define ONBOARD_LED_PIN LED_BUILTIN
 #endif
 
 #define VERSION 2

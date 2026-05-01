@@ -224,11 +224,13 @@ void setup() {
   pinMode(SECONDARY_OUTPUT_PIN, OUTPUT); /* Secondary (cam1 usually) output */
   pinMode(TERTIARY_OUTPUT_PIN, OUTPUT); /* Tertiary (cam2 usually) output */
   pinMode(KNOCK_OUTPUT_PIN, OUTPUT); /* Knock signal */
+  pinMode(ONBOARD_LED_PIN, OUTPUT); /* NodeMCU built-in LED */
 
   timer1_disable();
   timer1_isr_init();
   timer1_attachInterrupt(timer1_isr);
   timer1_enable(TIM_DIV1, TIM_LOOP, true);
+  timer1_write(new_OCR1A); // Ensure timer has the correct initial interval before the first ISR
 
   adc0 = analogRead(RPM_POT_PIN);
   adc0_read_complete = true;
@@ -247,6 +249,7 @@ ICACHE_RAM_ATTR void writeOutputPattern(uint8_t pattern)
   digitalWrite(PRIMARY_OUTPUT_PIN, (pattern & 0x01) ? HIGH : LOW);
   digitalWrite(SECONDARY_OUTPUT_PIN, (pattern & 0x02) ? HIGH : LOW);
   digitalWrite(TERTIARY_OUTPUT_PIN, (pattern & 0x04) ? HIGH : LOW);
+  digitalWrite(ONBOARD_LED_PIN, (pattern & 0x02) ? LOW : HIGH); /* Mirror secondary output to LED (active low on NodeMCU) */
 }
 
 ICACHE_RAM_ATTR void timer1_isr()
