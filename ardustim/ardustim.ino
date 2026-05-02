@@ -68,6 +68,7 @@ void setup() {
   config.crank_offset = 0;
   currentStatus.rpm = 500;
   currentStatus.crank_offset = 0;
+  currentStatus.spinning = true;
   
   pinMode(PRIMARY_OUTPUT_PIN, OUTPUT);
   pinMode(SECONDARY_OUTPUT_PIN, OUTPUT);
@@ -129,6 +130,24 @@ void setRPM(uint16_t newRPM)
   uint32_t tmp = (uint32_t)(500000.0 / (Wheels[0].rpm_scaler * (float)newRPM));
   if (tmp < 1) { tmp = 1; }
   new_OCR1A = (uint16_t)tmp;
+}
+
+void setWheelSpinEnabled(bool enabled)
+{
+  if (currentStatus.spinning == enabled) { return; }
+
+  currentStatus.spinning = enabled;
+  if (enabled)
+  {
+    cycleStartTime = micros();
+    timer1_write((uint32_t)new_OCR1A * 160);
+    timer1_enable(TIM_DIV1, TIM_LOOP, true);
+  }
+  else
+  {
+    timer1_disable();
+    writeOutputPattern(0);
+  }
 }
 
 //! Apply crank offset by adjusting edge_counter

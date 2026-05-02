@@ -50,6 +50,7 @@ struct status
 {
   uint16_t rpm;
   int16_t crank_offset;
+  bool spinning;
 };
 extern struct status currentStatus;
 

@@ -5,6 +5,7 @@
  * Commands:
  *   R<value> - Set RPM (e.g., R2500)
  *   O<value> - Set crank offset in degrees (e.g., O15)
+ *   T[0|1] - Stop or start wheels (e.g., T0, T1, T)
  *   H - Print help
  *   S - Print current status
  *
@@ -38,6 +39,7 @@ void serialSetup()
   Serial.println("Commands:");
   Serial.println("  R<value>  - Set RPM (300-8000 RPM)");
   Serial.println("  O<value>  - Set crank offset (0-359 degrees)");
+  Serial.println("  T[0|1]    - Stop (T0) or start/toggle (T1 or T) wheels");
   Serial.println("  S         - Print current status");
   Serial.println("  H         - Print this help");
   Serial.println("================================================\n");
@@ -114,6 +116,26 @@ void commandParser()
         }
         break;
 
+      case 'T':
+      case 't':
+      {
+        bool newState;
+        if (inputValue.length() > 0)
+        {
+          newState = (inputValue.toInt() != 0);
+        }
+        else
+        {
+          newState = !currentStatus.spinning;
+        }
+
+        setWheelSpinEnabled(newState);
+        Serial.print("Wheel spinning ");
+        Serial.println(newState ? "ENABLED" : "DISABLED");
+        printStatus();
+      }
+        break;
+
       case 'S':
       case 's':
         printStatus();
@@ -125,6 +147,7 @@ void commandParser()
         Serial.println("Commands:");
         Serial.println("  R<value>  - Set RPM (300-8000 RPM)");
         Serial.println("  O<value>  - Set crank offset (0-359 degrees)");
+        Serial.println("  T[0|1]    - Stop (T0) or start/toggle (T1 or T) wheels");
         Serial.println("  S         - Print current status");
         Serial.println("  H         - Print this help\n");
         break;
@@ -143,5 +166,7 @@ void printStatus()
   Serial.print(currentStatus.rpm);
   Serial.print(" | Offset=");
   Serial.print(currentStatus.crank_offset);
-  Serial.println(" deg");
+  Serial.print(" deg");
+  Serial.print(" | Spinning=");
+  Serial.println(currentStatus.spinning ? "ON" : "OFF");
 }
