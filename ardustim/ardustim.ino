@@ -48,8 +48,9 @@ volatile uint8_t prescaler_bits = 0;
 volatile uint8_t last_prescaler_bits = 0;
 volatile uint16_t new_OCR1A = 5000; /* sane default */
 volatile uint16_t edge_counter = 0;
+volatile uint16_t crank_offset_edges = 0;
 volatile uint32_t cycleStartTime = micros();
-volatile uint32_t cycleDuration = 0;
+volatile   uint32_t cycleDuration = 0;
 uint32_t analog_last_read_ms = 0;
 
 /* Less sensitive globals */
@@ -96,7 +97,15 @@ ICACHE_RAM_ATTR void writeOutputPattern(uint8_t pattern)
 
 ICACHE_RAM_ATTR void timer1_isr()
 {
-  uint8_t outputState = pgm_read_byte(&Wheels[0].edge_states_ptr[edge_counter]);
+  uint16_t crank_index = edge_counter + crank_offset_edges;
+  if (crank_index >= Wheels[0].wheel_max_edges)
+  {
+    crank_index -= Wheels[0].wheel_max_edges;
+  }
+
+  uint8_t camState = pgm_read_byte(&Wheels[0].edge_states_ptr[edge_counter]) & 0x02;
+  uint8_t crankState = pgm_read_byte(&Wheels[0].edge_states_ptr[crank_index]) & 0x01;
+  uint8_t outputState = camState | crankState;
   writeOutputPattern(outputState);
 
   edge_counter++;
@@ -150,16 +159,15 @@ void setWheelSpinEnabled(bool enabled)
   }
 }
 
-//! Apply crank offset by adjusting edge_counter
+//! Apply crank offset relative to cam by storing the crank shift in wheel-edge units
 void applyOffset(int16_t offset_degrees)
 {
   // 6G72 has 144 edges per 720 degrees = 0.2 degrees per edge = 5 edges per degree
-  int16_t offset_edges = (offset_degrees * 5);
+  int32_t offset_edges = (int32_t)offset_degrees * 5;
   
   // Normalize to valid range
   while (offset_edges < 0) { offset_edges += Wheels[0].wheel_max_edges; }
   offset_edges = offset_edges % Wheels[0].wheel_max_edges;
   
-  // The offset will be applied on next cycle by adjusting where we are in the wheel pattern
-  edge_counter = offset_edges;
+  crank_offset_edges = (uint16_t)offset_edges;
 }
