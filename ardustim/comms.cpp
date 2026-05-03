@@ -6,7 +6,8 @@
  *   R<value> - Set RPM (e.g., R2500)
  *   O<value> - Set crank offset in degrees (e.g., O15)
  *   T[0|1] - Stop or start wheels (e.g., T0, T1, T)
- *   I[0|1] - Toggle output invert (e.g., I0, I1, I)
+ *   IK[0|1] - Invert crank output (e.g., IK0, IK1, IK)
+ *   IM[0|1] - Invert cam output (e.g., IM0, IM1, IM)
  *   H - Print help
  *   S - Print current status
  *
@@ -41,7 +42,8 @@ void serialSetup()
   Serial.println("  R<value>  - Set RPM (300-8000 RPM)");
   Serial.println("  O<value>  - Set crank offset (0-359 degrees)");
   Serial.println("  T[0|1]    - Stop (T0) or start/toggle (T1 or T) wheels");
-  Serial.println("  I[0|1]    - Disable (I0) or enable/toggle (I1 or I) output invert");
+  Serial.println("  IK[0|1]   - Disable (IK0), enable (IK1), or toggle (IK) crank invert");
+  Serial.println("  IM[0|1]   - Disable (IM0), enable (IM1), or toggle (IM) cam invert");
   Serial.println("  S         - Print current status");
   Serial.println("  H         - Print this help");
   Serial.println("================================================\n");
@@ -134,18 +136,56 @@ void commandParser()
         case 'I':
         case 'i':
         {
-          bool newState;
-          if (inputValue.length() > 0)
+          if (inputValue.length() < 1)
           {
-            newState = (inputValue.toInt() != 0);
+            // No argument provided for I command
+            Serial.println("ERROR: I command requires K or M (e.g., IK, IM)");
+            break;
+          }
+
+          char invertTarget = inputValue[0];
+          String invertValue = inputValue.substring(1);
+          uint8_t bitMask = 0;
+          const char* targetName = "";
+
+          if (invertTarget == 'K' || invertTarget == 'k')
+          {
+            bitMask = INVERT_CRANK_BIT;
+            targetName = "Crank";
+          }
+          else if (invertTarget == 'M' || invertTarget == 'm')
+          {
+            bitMask = INVERT_CAM_BIT;
+            targetName = "Cam";
           }
           else
           {
-            newState = !output_invert;
+            Serial.println("ERROR: Invalid invert target. Use K (crank) or M (cam)");
+            break;
           }
 
-          output_invert = newState;
-          Serial.print("Output invert ");
+          bool newState;
+          if (invertValue.length() > 0)
+          {
+            newState = (invertValue.toInt() != 0);
+          }
+          else
+          {
+            // Toggle current state
+            newState = !(output_invert_mask & bitMask);
+          }
+
+          if (newState)
+          {
+            output_invert_mask |= bitMask;  // Set bit
+          }
+          else
+          {
+            output_invert_mask &= ~bitMask; // Clear bit
+          }
+
+          Serial.print(targetName);
+          Serial.print(" invert ");
           Serial.println(newState ? "ENABLED" : "DISABLED");
           printStatus();
         }
@@ -163,7 +203,8 @@ void commandParser()
           Serial.println("  R<value>  - Set RPM (300-8000 RPM)");
           Serial.println("  O<value>  - Set crank offset (0-359 degrees)");
           Serial.println("  T[0|1]    - Stop (T0) or start/toggle (T1 or T) wheels");
-          Serial.println("  I[0|1]    - Disable (I0) or enable/toggle (I1 or I) output invert");
+          Serial.println("  IK[0|1]   - Disable (IK0), enable (IK1), or toggle (IK) crank invert");
+          Serial.println("  IM[0|1]   - Disable (IM0), enable (IM1), or toggle (IM) cam invert");
           Serial.println("  S         - Print current status");
           Serial.println("  H         - Print this help\n");
           break;
@@ -186,6 +227,8 @@ void printStatus()
   Serial.print(" deg");
   Serial.print(" | Spinning=");
   Serial.print(currentStatus.spinning ? "ON" : "OFF");
-  Serial.print(" | Invert=");
-  Serial.println(output_invert ? "ON" : "OFF");
+  Serial.print(" | Crank Invert=");
+  Serial.print((output_invert_mask & INVERT_CRANK_BIT) ? "ON" : "OFF");
+  Serial.print(" | Cam Invert=");
+  Serial.println((output_invert_mask & INVERT_CAM_BIT) ? "ON" : "OFF");
 }

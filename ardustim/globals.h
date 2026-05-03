@@ -38,6 +38,10 @@
 #define MIN_RPM 10
 #define MAX_RPM 8000
 
+// Output invert mask bits
+#define INVERT_CRANK_BIT 0x01  // Bit 0: invert crank output
+#define INVERT_CAM_BIT   0x02  // Bit 1: invert cam output
+
 // Simplified config for serial-controlled operation
 struct configTable 
 {
@@ -45,6 +49,8 @@ struct configTable
   int16_t crank_offset;  // Crank offset in degrees (signed for flexibility)
 } __attribute__ ((packed));
 extern struct configTable config;
+
+extern volatile uint8_t output_invert_mask;
 
 struct status 
 {

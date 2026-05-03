@@ -28,5 +28,6 @@
 void setRPM(uint16_t);
 void applyOffset(int16_t offset_degrees);
 void setWheelSpinEnabled(bool enabled);
+void writeOutputPattern(uint8_t pattern);
 
 #endif
