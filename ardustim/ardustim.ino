@@ -44,6 +44,7 @@ volatile bool adc0_read_complete = false;
 volatile bool adc1_read_complete = false;
 volatile bool reset_prescaler = false;
 volatile uint8_t output_invert_mask = 0x00; /* Don't invert anything */
+volatile bool output_invert = true; /* Global invert signal output flag */
 volatile uint8_t prescaler_bits = 0;
 volatile uint8_t last_prescaler_bits = 0;
 volatile uint16_t new_OCR1A = 5000; /* sane default */
@@ -89,6 +90,11 @@ void setup() {
 
 ICACHE_RAM_ATTR void writeOutputPattern(uint8_t pattern)
 {
+  if (output_invert)
+  {
+    pattern ^= 0x07; // invert the 3 output bits
+  }
+
   digitalWrite(PRIMARY_OUTPUT_PIN, (pattern & 0x01) ? HIGH : LOW);
   digitalWrite(SECONDARY_OUTPUT_PIN, (pattern & 0x02) ? HIGH : LOW);
   digitalWrite(TERTIARY_OUTPUT_PIN, (pattern & 0x04) ? HIGH : LOW);

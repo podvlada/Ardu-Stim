@@ -6,6 +6,7 @@
  *   R<value> - Set RPM (e.g., R2500)
  *   O<value> - Set crank offset in degrees (e.g., O15)
  *   T[0|1] - Stop or start wheels (e.g., T0, T1, T)
+ *   I[0|1] - Toggle output invert (e.g., I0, I1, I)
  *   H - Print help
  *   S - Print current status
  *
@@ -40,6 +41,7 @@ void serialSetup()
   Serial.println("  R<value>  - Set RPM (300-8000 RPM)");
   Serial.println("  O<value>  - Set crank offset (0-359 degrees)");
   Serial.println("  T[0|1]    - Stop (T0) or start/toggle (T1 or T) wheels");
+  Serial.println("  I[0|1]    - Disable (I0) or enable/toggle (I1 or I) output invert");
   Serial.println("  S         - Print current status");
   Serial.println("  H         - Print this help");
   Serial.println("================================================\n");
@@ -129,6 +131,26 @@ void commandParser()
         }
           break;
 
+        case 'I':
+        case 'i':
+        {
+          bool newState;
+          if (inputValue.length() > 0)
+          {
+            newState = (inputValue.toInt() != 0);
+          }
+          else
+          {
+            newState = !output_invert;
+          }
+
+          output_invert = newState;
+          Serial.print("Output invert ");
+          Serial.println(newState ? "ENABLED" : "DISABLED");
+          printStatus();
+        }
+          break;
+
         case 'S':
         case 's':
           printStatus();
@@ -141,6 +163,7 @@ void commandParser()
           Serial.println("  R<value>  - Set RPM (300-8000 RPM)");
           Serial.println("  O<value>  - Set crank offset (0-359 degrees)");
           Serial.println("  T[0|1]    - Stop (T0) or start/toggle (T1 or T) wheels");
+          Serial.println("  I[0|1]    - Disable (I0) or enable/toggle (I1 or I) output invert");
           Serial.println("  S         - Print current status");
           Serial.println("  H         - Print this help\n");
           break;
@@ -162,5 +185,7 @@ void printStatus()
   Serial.print(currentStatus.crank_offset);
   Serial.print(" deg");
   Serial.print(" | Spinning=");
-  Serial.println(currentStatus.spinning ? "ON" : "OFF");
+  Serial.print(currentStatus.spinning ? "ON" : "OFF");
+  Serial.print(" | Invert=");
+  Serial.println(output_invert ? "ON" : "OFF");
 }

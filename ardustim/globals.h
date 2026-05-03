@@ -53,7 +53,7 @@ struct status
   bool spinning;
 };
 extern struct status currentStatus;
-
+extern volatile bool output_invert;
 
 /* Tie things wheel related into one nicer structure ... */
 typedef struct _wheels wheels;
