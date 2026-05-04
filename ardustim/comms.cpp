@@ -44,6 +44,8 @@ void serialSetup()
   Serial.println("  T[0|1]    - Stop (T0) or start/toggle (T1 or T) wheels");
   Serial.println("  IK[0|1]   - Disable (IK0), enable (IK1), or toggle (IK) crank invert");
   Serial.println("  IM[0|1]   - Disable (IM0), enable (IM1), or toggle (IM) cam invert");
+  Serial.println("  EK[0|1]   - Disable (EK0), enable (EK1), or toggle (EK) crank output");
+  Serial.println("  EM[0|1]   - Disable (EM0), enable (EM1), or toggle (EM) cam output");
   Serial.println("  S         - Print current status");
   Serial.println("  H         - Print this help");
   Serial.println("================================================\n");
@@ -191,6 +193,64 @@ void commandParser()
         }
           break;
 
+        case 'E':
+        case 'e':
+        {
+          if (inputValue.length() < 1)
+          {
+            // No argument provided for E command
+            Serial.println("ERROR: E command requires K or M (e.g., EK, EM)");
+            break;
+          }
+
+          char enableTarget = inputValue[0];
+          String enableValue = inputValue.substring(1);
+          uint8_t bitMask = 0;
+          const char* targetName = "";
+
+          if (enableTarget == 'K' || enableTarget == 'k')
+          {
+            bitMask = ENABLE_CRANK_BIT;
+            targetName = "Crank";
+          }
+          else if (enableTarget == 'M' || enableTarget == 'm')
+          {
+            bitMask = ENABLE_CAM_BIT;
+            targetName = "Cam";
+          }
+          else
+          {
+            Serial.println("ERROR: Invalid enable target. Use K (crank) or M (cam)");
+            break;
+          }
+
+          bool newState;
+          if (enableValue.length() > 0)
+          {
+            newState = (enableValue.toInt() != 0);
+          }
+          else
+          {
+            // Toggle current state
+            newState = !(output_enable_mask & bitMask);
+          }
+
+          if (newState)
+          {
+            output_enable_mask |= bitMask;  // Set bit
+          }
+          else
+          {
+            output_enable_mask &= ~bitMask; // Clear bit
+          }
+
+          Serial.print(targetName);
+          Serial.print(" output ");
+          Serial.println(newState ? "ENABLED" : "DISABLED");
+          printStatus();
+        }
+          break;
+
         case 'S':
         case 's':
           printStatus();
@@ -205,6 +265,8 @@ void commandParser()
           Serial.println("  T[0|1]    - Stop (T0) or start/toggle (T1 or T) wheels");
           Serial.println("  IK[0|1]   - Disable (IK0), enable (IK1), or toggle (IK) crank invert");
           Serial.println("  IM[0|1]   - Disable (IM0), enable (IM1), or toggle (IM) cam invert");
+          Serial.println("  EK[0|1]   - Disable (EK0), enable (EK1), or toggle (EK) crank output");
+          Serial.println("  EM[0|1]   - Disable (EM0), enable (EM1), or toggle (EM) cam output");
           Serial.println("  S         - Print current status");
           Serial.println("  H         - Print this help\n");
           break;
@@ -227,8 +289,12 @@ void printStatus()
   Serial.print(" deg");
   Serial.print(" | Spinning=");
   Serial.print(currentStatus.spinning ? "ON" : "OFF");
+  Serial.print(" | Crank Enable=");
+  Serial.print((output_enable_mask & ENABLE_CRANK_BIT) ? "ON" : "OFF");
   Serial.print(" | Crank Invert=");
   Serial.print((output_invert_mask & INVERT_CRANK_BIT) ? "ON" : "OFF");
+  Serial.print(" | Cam Enable=");
+  Serial.print((output_enable_mask & ENABLE_CAM_BIT) ? "ON" : "OFF");
   Serial.print(" | Cam Invert=");
   Serial.println((output_invert_mask & INVERT_CAM_BIT) ? "ON" : "OFF");
 }

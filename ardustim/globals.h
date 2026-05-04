@@ -42,6 +42,10 @@
 #define INVERT_CRANK_BIT 0x01  // Bit 0: invert crank output
 #define INVERT_CAM_BIT   0x02  // Bit 1: invert cam output
 
+// Output enable mask bits
+#define ENABLE_CRANK_BIT 0x01  // Bit 0: enable crank output
+#define ENABLE_CAM_BIT   0x02  // Bit 1: enable cam output
+
 // Simplified config for serial-controlled operation
 struct configTable 
 {
@@ -51,6 +55,7 @@ struct configTable
 extern struct configTable config;
 
 extern volatile uint8_t output_invert_mask;
+extern volatile uint8_t output_enable_mask;
 
 struct status 
 {

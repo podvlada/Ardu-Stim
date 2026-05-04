@@ -44,6 +44,7 @@ volatile bool adc0_read_complete = false;
 volatile bool adc1_read_complete = false;
 volatile bool reset_prescaler = false;
 volatile uint8_t output_invert_mask = 0x00; /* Selective invert: bit 0=crank, bit 1=cam */
+volatile uint8_t output_enable_mask = 0x03; /* Enable mask: bit 0=crank, bit 1=cam (both enabled by default) */
 volatile uint8_t prescaler_bits = 0;
 volatile uint8_t last_prescaler_bits = 0;
 volatile uint16_t new_OCR1A = 5000; /* sane default */
@@ -89,6 +90,16 @@ void setup() {
 
 ICACHE_RAM_ATTR void writeOutputPattern(uint8_t pattern)
 {
+  // Apply enable mask - disable outputs that are turned off
+  if (!(output_enable_mask & ENABLE_CRANK_BIT))
+  {
+    pattern &= ~0x01;  // clear crank bit (bit 0)
+  }
+  if (!(output_enable_mask & ENABLE_CAM_BIT))
+  {
+    pattern &= ~0x02;  // clear cam bit (bit 1)
+  }
+
   // Selectively invert bits based on mask
   if (output_invert_mask & INVERT_CRANK_BIT)
   {
