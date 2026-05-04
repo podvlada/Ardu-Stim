@@ -1,7 +1,7 @@
 /* vim: set syntax=c expandtab sw=2 softtabstop=2 autoindent smartindent smarttab : */
 /*
- * Simplified Ardu-Stim for ESP8266 + Mitsubishi 6G72 only
- * Serial console control: RPM and crank offset
+ * Simplified Ardu-Stim for ESP8266 / Arduino Nano + Mitsubishi 6G72
+ * Serial console control: crank offset and cam input synchronization
  *
  * copyright 2014 David J. Andruczyk
  * 
@@ -25,11 +25,17 @@
 #include "Arduino.h"
 #include "wheel_defs.h"
 
-// ESP8266 pin definitions
+#if defined(ESP8266)
 #define PRIMARY_OUTPUT_PIN D5
-#define SECONDARY_OUTPUT_PIN D6
+#define CAM_INPUT_PIN D6
 #define TERTIARY_OUTPUT_PIN D7
 #define KNOCK_OUTPUT_PIN D8
+#else
+#define PRIMARY_OUTPUT_PIN 5
+#define CAM_INPUT_PIN 2
+#define TERTIARY_OUTPUT_PIN 7
+#define KNOCK_OUTPUT_PIN 8
+#endif
 #define ONBOARD_LED_PIN LED_BUILTIN
 
 // Mitsubishi 6G72 configuration
@@ -40,11 +46,11 @@
 
 // Output invert mask bits
 #define INVERT_CRANK_BIT 0x01  // Bit 0: invert crank output
-#define INVERT_CAM_BIT   0x02  // Bit 1: invert cam output
+#define INVERT_CAM_BIT   0x02  // Bit 1: invert cam input polarity
 
 // Output enable mask bits
 #define ENABLE_CRANK_BIT 0x01  // Bit 0: enable crank output
-#define ENABLE_CAM_BIT   0x02  // Bit 1: enable cam output
+#define ENABLE_CAM_BIT   0x02  // Bit 1: unused / legacy
 
 // Simplified config for serial-controlled operation
 struct configTable 

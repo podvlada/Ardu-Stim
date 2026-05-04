@@ -22,7 +22,11 @@
 #ifndef __WHEEL_DEFS_H__
 #define __WHEEL_DEFS_H__
 
+#if defined(ESP8266)
 #include <pgmspace.h>
+#else
+#include <avr/pgmspace.h>
+#endif
 
 /* Mitsubishi 6G72 - DOHC CAS and TCDS wheel pattern */
 typedef enum {
