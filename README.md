@@ -1,3 +1,12 @@
+## Fork of the original
+This is just a quick and ugly version to debug 6G74 ECU.
+Added support for ESP8266.
+Simplified it just to serial monitor comms, and just 6G74 cam/crank profile.
+
+
+
+
+
 <div align="center">
 
 <img src="https://github.com/speeduino/wiki.js/raw/master/img/Speeduino%20logo_med.png" alt="Speeduino" width="600" />
